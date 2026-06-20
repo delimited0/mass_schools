@@ -1835,20 +1835,24 @@ st.markdown(
     "are included in the school comparison view."
 )
 
-section = st.radio(
+section = st.segmented_control(
     "Section",
     ["SAT Scores", "Demographics Over Time", "MCAS scores", "Discipline"],
-    horizontal=True,
+    default="SAT Scores",
+    key="section",
     label_visibility="collapsed",
+    width="stretch",
 )
 
 if section == "SAT Scores":
     with st.spinner(f"Loading {len(sat_data_paths)} SAT data file(s)..."):
         sat_df = load_sat_data(tuple(sat_data_paths))
-    sat_subsection = st.radio(
+    sat_subsection = st.segmented_control(
         "SAT view",
         ["Scores Over Time", "Racial Breakdown", "Disadvantaged Breakdown"],
-        horizontal=True,
+        default="Scores Over Time",
+        key="sat_subsection",
+        width="stretch",
     )
     if sat_subsection == "Scores Over Time":
         all_students_df = sat_df[sat_df["STU_GRP"] == "All Students"].copy()
@@ -1866,10 +1870,12 @@ elif section == "Demographics Over Time":
 elif section == "MCAS scores":
     with st.spinner(f"Loading {len(mcas_data_paths)} MCAS data file(s)..."):
         mcas_df = load_mcas_data(tuple(mcas_data_paths))
-    mcas_subsection = st.radio(
+    mcas_subsection = st.segmented_control(
         "MCAS view",
         ["Scores Over Time", "Demographic Breakdown", "Performance Trajectory"],
-        horizontal=True,
+        default="Scores Over Time",
+        key="mcas_subsection",
+        width="stretch",
     )
     if mcas_subsection == "Scores Over Time":
         mcas_all_students_df = mcas_df[mcas_df["STU_GRP"] == "All Students"].copy()
