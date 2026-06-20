@@ -3,7 +3,10 @@ import pandas as pd
 import streamlit as st
 from pathlib import Path
 
-alt.data_transformers.enable("vegafusion")
+try:
+    alt.data_transformers.enable("vegafusion")
+except Exception:
+    alt.data_transformers.disable_max_rows()
 
 st.set_page_config(layout="wide", page_title="Massachusetts School Trends Over Time")
 
@@ -1823,23 +1826,6 @@ def render_disadvantaged_breakdown_tab(data):
     )
 
 
-with st.spinner(
-    f"Loading {len(sat_data_paths)} SAT data file(s)"
-    + (f" and {len(demographics_data_paths)} demographics file(s)" if demographics_data_paths else "")
-    + (f" and {len(discipline_data_paths)} discipline file(s)" if discipline_data_paths else "")
-    + (f" and {len(mcas_data_paths)} MCAS file(s)" if mcas_data_paths else "")
-    + "..."
-):
-    sat_df = load_sat_data(tuple(sat_data_paths))
-    demographics_df = load_demographics_data(tuple(demographics_data_paths))
-    discipline_df = load_discipline_data(tuple(discipline_data_paths))
-    mcas_df = load_mcas_data(tuple(mcas_data_paths))
-
-all_students_df = sat_df[sat_df["STU_GRP"] == "All Students"].copy()
-mcas_all_students_df = (
-    mcas_df[mcas_df["STU_GRP"] == "All Students"].copy() if not mcas_df.empty else pd.DataFrame()
-)
-
 st.title("Massachusetts School Trends Over Time")
 st.markdown(
     "Use the SAT Scores tab for school and district SAT comparisons plus SAT subgroup breakdowns, "
@@ -1849,42 +1835,53 @@ st.markdown(
     "are included in the school comparison view."
 )
 
-sat_tab, demographics_tab, mcas_tab, discipline_tab = st.tabs(
-    ["SAT Scores", "Demographics Over Time", "MCAS scores", "Discipline"]
+section = st.radio(
+    "Section",
+    ["SAT Scores", "Demographics Over Time", "MCAS scores", "Discipline"],
+    horizontal=True,
+    label_visibility="collapsed",
 )
 
-with sat_tab:
-    sat_scores_subtab, sat_racial_subtab, sat_disadvantaged_subtab = st.tabs(
-        ["Scores Over Time", "Racial Breakdown", "Disadvantaged Breakdown"]
+if section == "SAT Scores":
+    with st.spinner(f"Loading {len(sat_data_paths)} SAT data file(s)..."):
+        sat_df = load_sat_data(tuple(sat_data_paths))
+    sat_subsection = st.radio(
+        "SAT view",
+        ["Scores Over Time", "Racial Breakdown", "Disadvantaged Breakdown"],
+        horizontal=True,
     )
-
-    with sat_scores_subtab:
+    if sat_subsection == "Scores Over Time":
+        all_students_df = sat_df[sat_df["STU_GRP"] == "All Students"].copy()
         render_sat_scores_tab(all_students_df)
-
-    with sat_racial_subtab:
+    elif sat_subsection == "Racial Breakdown":
         render_racial_breakdown_tab(sat_df)
-
-    with sat_disadvantaged_subtab:
+    else:
         render_disadvantaged_breakdown_tab(sat_df)
 
-with demographics_tab:
+elif section == "Demographics Over Time":
+    with st.spinner(f"Loading {len(demographics_data_paths)} demographics data file(s)..."):
+        demographics_df = load_demographics_data(tuple(demographics_data_paths))
     render_demographics_over_time_tab(demographics_df)
 
-with mcas_tab:
-    mcas_scores_subtab, mcas_demographics_subtab, mcas_trajectory_subtab = st.tabs(
-        ["Scores Over Time", "Demographic Breakdown", "Performance Trajectory"]
+elif section == "MCAS scores":
+    with st.spinner(f"Loading {len(mcas_data_paths)} MCAS data file(s)..."):
+        mcas_df = load_mcas_data(tuple(mcas_data_paths))
+    mcas_subsection = st.radio(
+        "MCAS view",
+        ["Scores Over Time", "Demographic Breakdown", "Performance Trajectory"],
+        horizontal=True,
     )
-
-    with mcas_scores_subtab:
+    if mcas_subsection == "Scores Over Time":
+        mcas_all_students_df = mcas_df[mcas_df["STU_GRP"] == "All Students"].copy()
         render_mcas_scores_tab(mcas_all_students_df)
-
-    with mcas_demographics_subtab:
+    elif mcas_subsection == "Demographic Breakdown":
         render_mcas_demographic_tab(mcas_df)
-
-    with mcas_trajectory_subtab:
+    else:
         render_mcas_trajectory_tab(mcas_df)
 
-with discipline_tab:
+else:
+    with st.spinner(f"Loading {len(discipline_data_paths)} discipline data file(s)..."):
+        discipline_df = load_discipline_data(tuple(discipline_data_paths))
     render_discipline_tab(discipline_df)
 
 st.markdown(
@@ -1907,42 +1904,3 @@ st.markdown(
     "Discipline tab plots `STU_DISCIPL_CNT` for the selected organization, offense, and "
     "student-group combinations."
 )
-
-with st.expander("Data summary"):
-    st.write(f"Loaded {len(sat_df)} SAT rows (school and district records).")
-    st.write("SAT years:", sorted(sat_df["SY"].dropna().unique().tolist()))
-    st.write("SAT districts:", sat_df[sat_df["ORG_TYPE"] == "District"]["ORG_FULL"].nunique())
-    st.write("SAT schools:", sat_df[sat_df["ORG_TYPE"] == "School"]["ORG_FULL"].nunique())
-    if not demographics_df.empty:
-        st.write(f"Loaded {len(demographics_df)} demographics rows (school and district records).")
-        st.write("Demographics years:", sorted(demographics_df["SY"].dropna().unique().tolist()))
-        st.write(
-            "Demographics districts:",
-            demographics_df[demographics_df["ORG_TYPE"] == "District"]["ORG_FULL"].nunique(),
-        )
-        st.write(
-            "Demographics schools:",
-            demographics_df[demographics_df["ORG_TYPE"] == "School"]["ORG_FULL"].nunique(),
-        )
-    if not discipline_df.empty:
-        st.write(f"Loaded {len(discipline_df)} discipline rows (school and district records).")
-        st.write("Discipline years:", sorted(discipline_df["SY"].dropna().unique().tolist()))
-        st.write(
-            "Discipline districts:",
-            discipline_df[discipline_df["ORG_TYPE"] == "District"]["ORG_FULL"].nunique(),
-        )
-        st.write(
-            "Discipline schools:",
-            discipline_df[discipline_df["ORG_TYPE"] == "School"]["ORG_FULL"].nunique(),
-        )
-    if not mcas_df.empty:
-        st.write(f"Loaded {len(mcas_df)} MCAS rows (school and district records).")
-        st.write("MCAS years:", sorted(mcas_df["SY"].dropna().unique().tolist()))
-        st.write(
-            "MCAS districts:",
-            mcas_df[mcas_df["ORG_TYPE"] == "District"]["ORG_FULL"].nunique(),
-        )
-        st.write(
-            "MCAS schools:",
-            mcas_df[mcas_df["ORG_TYPE"] == "School"]["ORG_FULL"].nunique(),
-        )
