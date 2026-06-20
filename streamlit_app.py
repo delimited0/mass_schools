@@ -81,6 +81,65 @@ DISADVANTAGED_COLUMNS = {
     "Students with Disabilities": ("SWD_CNT", "SWD_PCT"),
     "Economically Disadvantaged": ("ECD_CNT", "ECD_PCT"),
 }
+SAT_REQUIRED_COLUMNS = [
+    "ORG_TYPE",
+    "ORG_CODE",
+    "ORG_NAME",
+    "DIST_CODE",
+    "DIST_NAME",
+    "SY",
+    "STU_GRP",
+    "TAKEN_CNT",
+    "READ_SCORE",
+    "WRITE_SCORE",
+    "READ_WRITE_SCORE",
+    "MATH_SCORE",
+]
+DEMOGRAPHICS_REQUIRED_COLUMNS = [
+    "ORG_TYPE",
+    "ORG_CODE",
+    "ORG_NAME",
+    "DIST_CODE",
+    "DIST_NAME",
+    "SY",
+    "TOTAL_CNT",
+    *sorted(set(RACE_PCT_COLUMNS.values())),
+    *sorted({count_col for count_col, _ in DISADVANTAGED_COLUMNS.values()}),
+    *sorted({pct_col for _, pct_col in DISADVANTAGED_COLUMNS.values()}),
+]
+DISCIPLINE_REQUIRED_COLUMNS = [
+    "ORG_TYPE",
+    "ORG_CODE",
+    "ORG_NAME",
+    "DIST_CODE",
+    "DIST_NAME",
+    "SY",
+    "STU_GRP",
+    "OFFENSE",
+    "STU_CNT",
+    "STU_DISCIPL_CNT",
+    "IN_SUSP_PCT",
+    "OUT_SUSP_PCT",
+    "EXP_PCT",
+    "ALT_SETTING_PCT",
+    "EMERG_RMVL_PCT",
+    "ARREST_PCT",
+    "LAWENF_REF_PCT",
+]
+MCAS_REQUIRED_COLUMNS = [
+    "ORG_TYPE",
+    "ORG_CODE",
+    "ORG_NAME",
+    "DIST_CODE",
+    "DIST_NAME",
+    "SY",
+    "TEST_GRADE",
+    "SUBJECT_CODE",
+    "STU_GRP",
+    "AVG_SCALED_SCORE",
+    "STU_PART_PCT",
+    "STU_CNT",
+]
 
 base = Path(__file__).resolve().parent
 
@@ -100,7 +159,9 @@ def collect_versioned_data_paths(base_path, stem_glob):
 def read_tabular_file(path, **kwargs):
     if path.suffix == ".parquet":
         kwargs.pop("low_memory", None)
+        kwargs.pop("usecols", None)
         return pd.read_parquet(path, **kwargs)
+    kwargs.pop("columns", None)
     return pd.read_csv(path, **kwargs)
 
 
@@ -210,7 +271,7 @@ def normalize_mcas_org_type(series):
 def load_sat_data(paths):
     frames = []
     for path in paths:
-        frame = read_tabular_file(path)
+        frame = read_tabular_file(path, columns=SAT_REQUIRED_COLUMNS, usecols=SAT_REQUIRED_COLUMNS)
         frame.columns = [c.strip() for c in frame.columns]
         frames.append(frame)
 
@@ -249,7 +310,12 @@ def load_demographics_data(paths):
 
     frames = []
     for path in paths:
-        frame = read_tabular_file(path, low_memory=False)
+        frame = read_tabular_file(
+            path,
+            low_memory=False,
+            columns=DEMOGRAPHICS_REQUIRED_COLUMNS,
+            usecols=DEMOGRAPHICS_REQUIRED_COLUMNS,
+        )
         frame.columns = [c.strip() for c in frame.columns]
         frames.append(frame)
 
@@ -279,7 +345,12 @@ def load_discipline_data(paths):
 
     frames = []
     for path in paths:
-        frame = read_tabular_file(path, low_memory=False)
+        frame = read_tabular_file(
+            path,
+            low_memory=False,
+            columns=DISCIPLINE_REQUIRED_COLUMNS,
+            usecols=DISCIPLINE_REQUIRED_COLUMNS,
+        )
         frame.columns = [c.strip() for c in frame.columns]
         frames.append(frame)
 
@@ -315,7 +386,12 @@ def load_mcas_data(paths):
 
     frames = []
     for path in paths:
-        frame = read_tabular_file(path, low_memory=False)
+        frame = read_tabular_file(
+            path,
+            low_memory=False,
+            columns=MCAS_REQUIRED_COLUMNS,
+            usecols=MCAS_REQUIRED_COLUMNS,
+        )
         frame.columns = [c.strip() for c in frame.columns]
         frames.append(frame)
 
